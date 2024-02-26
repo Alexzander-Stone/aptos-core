@@ -93,8 +93,12 @@ module aptos_framework::multisig_account {
     const EINVALID_SEQUENCE_NUMBER: u64 = 17;
     /// Provided owners to remove and new owners overlap.
     const EOWNERS_TO_REMOVE_NEW_OWNERS_OVERLAP: u64 = 18;
+    /// The number of pending transactions has exceeded the maximum allowed.
+    const EMAX_PENDING_TRANSACTIONS_EXCEEDED: u64 = 19;
 
     const ZERO_AUTH_KEY: vector<u8> = x"0000000000000000000000000000000000000000000000000000000000000000";
+
+    const MAX_PENDING_TRANSACTIONS: u64 = 20;
 
     /// Represents a multisig account's configurations and transactions.
     /// This will be stored in the multisig account (created as a resource account separate from any owner accounts).
@@ -382,6 +386,17 @@ module aptos_framework::multisig_account {
         let voted = simple_map::contains_key(votes, &owner);
         let vote = voted && *simple_map::borrow(votes, &owner);
         (voted, vote)
+    }
+
+    #[view]
+    public fun available_transaction_queue_capacity(multisig_account: address): u64 acquires MultisigAccount {
+        let multisig_account_resource = borrow_global_mut<MultisigAccount>(multisig_account);
+        let num_pending_transactions = multisig_account_resource.next_sequence_number - multisig_account_resource.last_executed_sequence_number - 1;
+        if (num_pending_transactions > MAX_PENDING_TRANSACTIONS) {
+            0
+        } else {
+            MAX_PENDING_TRANSACTIONS - num_pending_transactions
+        }
     }
 
     ////////////////////////// Multisig account creation functions ///////////////////////////////
@@ -832,7 +847,7 @@ module aptos_framework::multisig_account {
     }
 
     /// Generic function that can be used to either approve or reject a multisig transaction
-    public entry fun vote_transanction(
+    public entry fun vote_transaction(
         owner: &signer, multisig_account: address, sequence_number: u64, approved: bool) acquires MultisigAccount {
         assert_multisig_account_exists(multisig_account);
         let multisig_account_resource = borrow_global_mut<MultisigAccount>(multisig_account);
@@ -862,6 +877,23 @@ module aptos_framework::multisig_account {
         );
     }
 
+    /// Retained for backward compatibility: the function with the typographical error in its name
+    /// will continue to be an accessible entry point.
+    public entry fun vote_transanction(
+        owner: &signer, multisig_account: address, sequence_number: u64, approved: bool) acquires MultisigAccount {
+        vote_transaction(owner, multisig_account, sequence_number, approved);
+    }
+
+    /// Generic function that can be used to either approve or reject a batch of transactions within a specified range.
+    public entry fun vote_transactions(
+        owner: &signer, multisig_account: address, starting_sequence_number: u64, final_sequence_number: u64, approved: bool) acquires MultisigAccount {
+        let sequence_number = starting_sequence_number;
+        while(sequence_number <= final_sequence_number) {
+            vote_transanction(owner, multisig_account, sequence_number, approved);
+            sequence_number = sequence_number + 1;
+        }
+    }
+
     /// Remove the next transaction if it has sufficient owner rejections.
     public entry fun execute_rejected_transaction(
         owner: &signer,
@@ -889,6 +921,27 @@ module aptos_framework::multisig_account {
                 executor: address_of(owner),
             }
         );
+    }
+
+    /// Remove the next transactions until the final_sequence_number if they have sufficient owner rejections.
+    public entry fun execute_rejected_transactions(
+        owner: &signer,
+        multisig_account: address,
+        final_sequence_number: u64,
+    ) acquires MultisigAccount {
+        assert!(last_resolved_sequence_number(multisig_account) < final_sequence_number, error::invalid_argument(EINVALID_SEQUENCE_NUMBER));
+        assert!(final_sequence_number < next_sequence_number(multisig_account), error::invalid_argument(EINVALID_SEQUENCE_NUMBER));
+        while(last_resolved_sequence_number(multisig_account) < final_sequence_number) {
+            execute_rejected_transaction(owner, multisig_account);
+        }
+    }
+
+    /// Remove all pending transactions if they have sufficient owner rejections.
+    public entry fun execute_all_rejected_transactions(
+        owner: &signer,
+        multisig_account: address,
+    ) acquires MultisigAccount {
+        execute_rejected_transactions(owner, multisig_account, next_sequence_number(multisig_account) - 1);
     }
 
     ////////////////////////// To be called by VM only ///////////////////////////////
@@ -978,6 +1031,12 @@ module aptos_framework::multisig_account {
     }
 
     fun add_transaction(creator: address, multisig_account: &mut MultisigAccount, transaction: MultisigTransaction) {
+        let num_pending_transactions = multisig_account.next_sequence_number - (multisig_account.last_executed_sequence_number + 1);
+        assert!(
+            num_pending_transactions < MAX_PENDING_TRANSACTIONS,
+            error::invalid_state(EMAX_PENDING_TRANSACTIONS_EXCEEDED)
+        );
+
         // The transaction creator also automatically votes for the transaction.
         simple_map::add(&mut transaction.votes, creator, true);
 
@@ -1887,5 +1946,101 @@ module aptos_framework::multisig_account {
             vector[owner_1_addr],
             option::none()
         );
+    }
+
+    #[test(owner_1 = @0x123, owner_2 = @0x124, owner_3 = @0x125)]
+    #[expected_failure(abort_code = 196627, location = Self)]
+    fun test_max_pending_transaction_limit_should_fail(
+        owner_1: &signer,
+        owner_2: &signer,
+        owner_3: &signer
+    ) acquires MultisigAccount {
+        setup();
+        let owner_1_addr = address_of(owner_1);
+        let owner_2_addr = address_of(owner_2);
+        let owner_3_addr = address_of(owner_3);
+        create_account(owner_1_addr);
+        let multisig_address = get_next_multisig_account_address(owner_1_addr);
+        create_with_owners(
+            owner_1,
+            vector[owner_2_addr, owner_3_addr],
+            2,
+            vector[],
+            vector[]
+        );
+
+        let remaining_iterations = MAX_PENDING_TRANSACTIONS + 1;
+        while (remaining_iterations > 0) {
+            create_transaction(owner_1, multisig_address, PAYLOAD);
+            remaining_iterations = remaining_iterations - 1;
+        }
+    }
+
+    #[test_only]
+    fun create_transaction_with_eviction(
+        owner: &signer,
+        multisig_account: address,
+        payload: vector<u8>,
+    ) acquires MultisigAccount {
+        while(available_transaction_queue_capacity(multisig_account) == 0) {
+            execute_rejected_transaction(owner, multisig_account)
+        };
+        create_transaction(owner, multisig_account, payload);
+    }
+
+    #[test_only]
+    fun vote_all_transactions(
+        owner: &signer, multisig_account: address, approved: bool) acquires MultisigAccount {
+        let starting_sequence_number = last_resolved_sequence_number(multisig_account) + 1;
+        let final_sequence_number = next_sequence_number(multisig_account) - 1;
+        vote_transactions(owner, multisig_account, starting_sequence_number, final_sequence_number, approved);
+    }
+
+    #[test(owner_1 = @0x123, owner_2 = @0x124, owner_3 = @0x125)]
+    fun test_dos_mitigation_end_to_end(
+        owner_1: &signer,
+        owner_2: &signer,
+        owner_3: &signer
+    ) acquires MultisigAccount {
+        setup();
+        let owner_1_addr = address_of(owner_1);
+        let owner_2_addr = address_of(owner_2);
+        let owner_3_addr = address_of(owner_3);
+        create_account(owner_1_addr);
+        let multisig_address = get_next_multisig_account_address(owner_1_addr);
+        create_with_owners(
+            owner_1,
+            vector[owner_2_addr, owner_3_addr],
+            2,
+            vector[],
+            vector[]
+        );
+
+        // owner_3 is compromised and creates a bunch of bogus transactions.
+        let remaining_iterations = MAX_PENDING_TRANSACTIONS;
+        while (remaining_iterations > 0) {
+            create_transaction(owner_3, multisig_address, PAYLOAD);
+            remaining_iterations = remaining_iterations - 1;
+        };
+
+        // No one can create a transaction anymore because the transaction queue is full.
+        assert!(available_transaction_queue_capacity(multisig_address) == 0, 0);
+
+        // owner_1 and owner_2 vote "no" on all transactions.
+        vote_all_transactions(owner_1, multisig_address, false);
+        vote_all_transactions(owner_2, multisig_address, false);
+
+        // owner_1 evicts a transaction and creates a transaction to remove the compromised owner.
+        // Note that `PAYLOAD` is a placeholder and is not actually executed in this unit test.
+        create_transaction_with_eviction(owner_1, multisig_address, PAYLOAD);
+
+        // owner_2 approves the eviction transaction.
+        approve_transaction(owner_2, multisig_address, 11);
+
+        // owner_1 flushes the transaction queue except for the eviction transaction.
+        execute_rejected_transactions(owner_1, multisig_address, 10);
+
+        // execute the eviction transaction to remove the compromised owner.
+        assert!(can_be_executed(multisig_address, 11), 0);
     }
 }

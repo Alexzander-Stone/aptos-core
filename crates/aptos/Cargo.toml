@@ -84,7 +84,7 @@ processor = { git = "https://github.com/aptos-labs/aptos-indexer-processors.git"
 rand = { workspace = true }
 regex = { workspace = true }
 reqwest = { workspace = true }
-self_update = { version = "0.38.0", features = ["archive-zip", "compression-zip-deflate"] }
+self_update = { git = "https://github.com/banool/self_update.git", rev = "4acb0b79333ce4d4aada31ee029f515a38be0303", features = ["archive-zip", "compression-zip-deflate"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }

@@ -42,14 +42,10 @@ struct TestConfig {
     pipeline: FunctionTargetPipeline,
     /// Whether we should generate file format from resulting bytecode.
     generate_file_format: bool,
-    /// Whether we should dump annotated targets for each stage of the pipeline.
+    /// Whether we should dump annotated targets for various stages of the pipeline.
+    /// Note: even when this flag is `true`, stages added to the pipeline with
+    /// `add_processor_without_annotation_dump` are not dumped.
     dump_annotated_targets: bool,
-    /// Optionally, dump annotated targets for only certain stages of the pipeline.
-    /// If None, dump annotated targets for all stages.
-    /// If Some(list), dump annotated targets for pipeline stages whose index is in the list.
-    /// If `dump_annotated_targets` is false, this field is ignored.
-    /// Note: the pipeline stages are numbered starting from 0.
-    dump_for_only_some_stages: Option<Vec<usize>>,
 }
 
 fn path_from_crate_root(path: &str) -> String {
@@ -93,7 +89,7 @@ impl TestConfig {
         let verbose = cfg!(feature = "verbose-debug-print");
         let mut pipeline = FunctionTargetPipeline::default();
         if path.contains("/inlining/bug_11112") || path.contains("/inlining/bug_9717_looponly") {
-            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor::basic()));
             pipeline.add_processor(Box::new(ReferenceSafetyProcessor {}));
             Self {
                 stop_before_generating_bytecode: false,
@@ -101,10 +97,9 @@ impl TestConfig {
                 pipeline,
                 generate_file_format: false,
                 dump_annotated_targets: true,
-                dump_for_only_some_stages: None,
             }
         } else if path.contains("/inlining/") || path.contains("/folding/") {
-            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor::basic()));
             pipeline.add_processor(Box::new(ReferenceSafetyProcessor {}));
             pipeline.add_processor(Box::new(ExitStateAnalysisProcessor {}));
             pipeline.add_processor(Box::new(AbilityProcessor {}));
@@ -114,10 +109,9 @@ impl TestConfig {
                 pipeline,
                 generate_file_format: false,
                 dump_annotated_targets: verbose,
-                dump_for_only_some_stages: None,
             }
         } else if path.contains("/unit_test/") {
-            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor::basic()));
             options.testing = true;
             Self {
                 stop_before_generating_bytecode: false,
@@ -125,7 +119,6 @@ impl TestConfig {
                 pipeline,
                 generate_file_format: false,
                 dump_annotated_targets: verbose,
-                dump_for_only_some_stages: None,
             }
         } else if path.contains("/checking/") || path.contains("/parser/") {
             Self {
@@ -134,7 +127,6 @@ impl TestConfig {
                 pipeline,
                 generate_file_format: false,
                 dump_annotated_targets: verbose,
-                dump_for_only_some_stages: None,
             }
         } else if path.contains("/bytecode-generator/") {
             Self {
@@ -143,21 +135,19 @@ impl TestConfig {
                 pipeline,
                 generate_file_format: false,
                 dump_annotated_targets: true,
-                dump_for_only_some_stages: None,
             }
         } else if path.contains("/file-format-generator/") {
-            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor::basic()));
             pipeline.add_processor(Box::new(ReferenceSafetyProcessor {}));
             pipeline.add_processor(Box::new(ExitStateAnalysisProcessor {}));
             pipeline.add_processor(Box::new(AbilityProcessor {}));
-            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor::basic()));
             Self {
                 stop_before_generating_bytecode: false,
                 dump_ast: false,
                 pipeline,
                 generate_file_format: true,
                 dump_annotated_targets: false,
-                dump_for_only_some_stages: None,
             }
         } else if path.contains("/visibility-checker/") {
             Self {
@@ -166,20 +156,18 @@ impl TestConfig {
                 pipeline,
                 generate_file_format: false,
                 dump_annotated_targets: verbose,
-                dump_for_only_some_stages: None,
             }
         } else if path.contains("/live-var/") {
-            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor::basic()));
             Self {
                 stop_before_generating_bytecode: false,
                 dump_ast: false,
                 pipeline,
                 generate_file_format: false,
                 dump_annotated_targets: true,
-                dump_for_only_some_stages: None,
             }
         } else if path.contains("/reference-safety/") {
-            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor::basic()));
             pipeline.add_processor(Box::new(ReferenceSafetyProcessor {}));
             Self {
                 stop_before_generating_bytecode: false,
@@ -187,7 +175,6 @@ impl TestConfig {
                 pipeline,
                 generate_file_format: false,
                 dump_annotated_targets: verbose,
-                dump_for_only_some_stages: None,
             }
         } else if path.contains("/abort-analysis/") {
             pipeline.add_processor(Box::new(ExitStateAnalysisProcessor {}));
@@ -197,10 +184,9 @@ impl TestConfig {
                 pipeline,
                 generate_file_format: false,
                 dump_annotated_targets: true,
-                dump_for_only_some_stages: None,
             }
         } else if path.contains("/ability-check/") {
-            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor::basic()));
             pipeline.add_processor(Box::new(ReferenceSafetyProcessor {}));
             pipeline.add_processor(Box::new(ExitStateAnalysisProcessor {}));
             pipeline.add_processor(Box::new(AbilityProcessor {}));
@@ -210,11 +196,10 @@ impl TestConfig {
                 pipeline,
                 generate_file_format: false,
                 dump_annotated_targets: false,
-                dump_for_only_some_stages: None,
             }
         } else if path.contains("/ability-transform/") {
             // Difference to above is that we dump targets
-            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor::basic()));
             pipeline.add_processor(Box::new(ReferenceSafetyProcessor {}));
             pipeline.add_processor(Box::new(ExitStateAnalysisProcessor {}));
             pipeline.add_processor(Box::new(AbilityProcessor {}));
@@ -224,26 +209,27 @@ impl TestConfig {
                 pipeline,
                 generate_file_format: false,
                 dump_annotated_targets: true,
-                dump_for_only_some_stages: None,
             }
         } else if path.contains("/copy-propagation/") {
-            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
-            pipeline.add_processor(Box::new(ReferenceSafetyProcessor {}));
-            pipeline.add_processor(Box::new(ExitStateAnalysisProcessor {}));
-            pipeline.add_processor(Box::new(AbilityProcessor {}));
-            pipeline.add_processor(Box::new(AvailCopiesAnalysisProcessor {})); // 4
-            pipeline.add_processor(Box::new(CopyPropagation {})); // 5
-            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
-            pipeline.add_processor(Box::new(DeadStoreElimination {})); // 7
-            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
+            pipeline
+                .add_processor_without_annotation_dump(Box::new(LiveVarAnalysisProcessor::basic()));
+            pipeline.add_processor_without_annotation_dump(Box::new(ReferenceSafetyProcessor {}));
+            pipeline.add_processor_without_annotation_dump(Box::new(ExitStateAnalysisProcessor {}));
+            pipeline.add_processor_without_annotation_dump(Box::new(AbilityProcessor {}));
+            pipeline.add_processor(Box::new(AvailCopiesAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(CopyPropagation {}));
+            pipeline.add_processor_without_annotation_dump(Box::new(
+                LiveVarAnalysisProcessor::track_all_usages(),
+            ));
+            pipeline.add_processor(Box::new(DeadStoreElimination {}));
+            pipeline
+                .add_processor_without_annotation_dump(Box::new(LiveVarAnalysisProcessor::basic()));
             Self {
                 stop_before_generating_bytecode: false,
                 dump_ast: false,
                 pipeline,
                 generate_file_format: false,
                 dump_annotated_targets: true,
-                // Only dump with annotations after these pipeline stages.
-                dump_for_only_some_stages: Some(vec![4, 5, 7]),
             }
         } else if path.contains("/uninit-use-checker/") {
             pipeline.add_processor(Box::new(UninitializedUseChecker {}));
@@ -253,7 +239,6 @@ impl TestConfig {
                 pipeline,
                 generate_file_format: false,
                 dump_annotated_targets: true,
-                dump_for_only_some_stages: None,
             }
         } else if path.contains("/unreachable-code-remover/") {
             pipeline.add_processor(Box::new(UnreachableCodeProcessor {}));
@@ -264,10 +249,9 @@ impl TestConfig {
                 pipeline,
                 generate_file_format: false,
                 dump_annotated_targets: true,
-                dump_for_only_some_stages: None,
             }
         } else if path.contains("/bytecode-verify-failure/") {
-            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor::basic()));
             // Note that we do not run ability checker here, as we want to induce
             // a bytecode verification failure. The test in /bytecode-verify-failure/
             // has erroneous ability annotations.
@@ -277,18 +261,31 @@ impl TestConfig {
                 pipeline,
                 generate_file_format: true,
                 dump_annotated_targets: false,
-                dump_for_only_some_stages: None,
             }
         } else if path.contains("/variable-coalescing/") {
-            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
-            pipeline.add_processor(Box::new(VariableCoalescing {}));
+            pipeline
+                .add_processor_without_annotation_dump(Box::new(LiveVarAnalysisProcessor::basic()));
+            pipeline.add_processor_without_annotation_dump(Box::new(ReferenceSafetyProcessor {}));
+            pipeline.add_processor_without_annotation_dump(Box::new(ExitStateAnalysisProcessor {}));
+            pipeline.add_processor_without_annotation_dump(Box::new(AbilityProcessor {}));
+            pipeline.add_processor_without_annotation_dump(Box::new(UnreachableCodeProcessor {}));
+            pipeline.add_processor_without_annotation_dump(Box::new(UnreachableCodeRemover {}));
+            pipeline
+                .add_processor_without_annotation_dump(Box::new(LiveVarAnalysisProcessor::basic()));
+            pipeline.add_processor(Box::new(VariableCoalescing::annotate_only()));
+            pipeline.add_processor(Box::new(VariableCoalescing::transform_only()));
+            pipeline.add_processor_without_annotation_dump(Box::new(
+                LiveVarAnalysisProcessor::track_all_usages(),
+            ));
+            pipeline.add_processor(Box::new(DeadStoreElimination {}));
+            pipeline
+                .add_processor_without_annotation_dump(Box::new(LiveVarAnalysisProcessor::basic()));
             Self {
                 stop_before_generating_bytecode: false,
                 dump_ast: false,
                 pipeline,
-                generate_file_format: false,
+                generate_file_format: true,
                 dump_annotated_targets: true,
-                dump_for_only_some_stages: None,
             }
         } else {
             panic!(
@@ -388,13 +385,9 @@ impl TestConfig {
                     |i, processor, targets_after| {
                         let out = &mut test_output.borrow_mut();
                         Self::check_diags(out, &env);
-                        // Note that `i` starts at 1.
                         let title = format!("after {}:", processor.name());
-                        let stage_dump_enabled = self.dump_for_only_some_stages.is_none()
-                            || self
-                                .dump_for_only_some_stages
-                                .as_ref()
-                                .is_some_and(|list| list.contains(&(i - 1)));
+                        // Note that `i` starts at 1.
+                        let stage_dump_enabled = self.pipeline.should_dump_target_annotations(i);
                         if self.dump_annotated_targets && stage_dump_enabled {
                             out.push_str(
                                 &move_stackless_bytecode::print_targets_with_annotations_for_test(

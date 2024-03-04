@@ -13,8 +13,7 @@ pub mod options;
 pub mod pipeline;
 
 use crate::pipeline::{
-    ability_processor::AbilityProcessor, avail_copies_analysis::AvailCopiesAnalysisProcessor,
-    copy_propagation::CopyPropagation, dead_store_elimination::DeadStoreElimination,
+    ability_processor::AbilityProcessor, dead_store_elimination::DeadStoreElimination,
     exit_state_analysis::ExitStateAnalysisProcessor,
     livevar_analysis_processor::LiveVarAnalysisProcessor,
     reference_safety_processor::ReferenceSafetyProcessor,
@@ -215,7 +214,7 @@ pub fn bytecode_pipeline(env: &GlobalEnv) -> FunctionTargetPipeline {
     if safety_on {
         pipeline.add_processor(Box::new(UninitializedUseChecker {}));
     }
-    pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
+    pipeline.add_processor(Box::new(LiveVarAnalysisProcessor::basic()));
     pipeline.add_processor(Box::new(ReferenceSafetyProcessor {}));
     pipeline.add_processor(Box::new(ExitStateAnalysisProcessor {}));
     pipeline.add_processor(Box::new(AbilityProcessor {}));
@@ -224,7 +223,7 @@ pub fn bytecode_pipeline(env: &GlobalEnv) -> FunctionTargetPipeline {
     }
     // Run live var analysis again because it could be invalidated by previous pipeline steps,
     // but it is needed by file format generator.
-    pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
+    pipeline.add_processor(Box::new(LiveVarAnalysisProcessor::basic()));
     pipeline
 }
 
@@ -235,17 +234,12 @@ pub fn bytecode_pipeline(env: &GlobalEnv) -> FunctionTargetPipeline {
 /// While this section of the pipeline is optional, some code that used to previously compile
 /// may no longer compile without this section because of using too many local (temp) variables.
 fn add_default_optimization_pipeline(pipeline: &mut FunctionTargetPipeline) {
-    // Available copies analysis is needed by copy propagation.
-    pipeline.add_processor(Box::new(AvailCopiesAnalysisProcessor {}));
-    pipeline.add_processor(Box::new(CopyPropagation {}));
-    // Live var analysis is needed by dead store elimination.
-    pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
-    pipeline.add_processor(Box::new(DeadStoreElimination {}));
     pipeline.add_processor(Box::new(UnreachableCodeProcessor {}));
     pipeline.add_processor(Box::new(UnreachableCodeRemover {}));
-    // Live var analysis is needed by variable coalescing.
-    pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
-    pipeline.add_processor(Box::new(VariableCoalescing {}));
+    pipeline.add_processor(Box::new(LiveVarAnalysisProcessor::basic()));
+    pipeline.add_processor(Box::new(VariableCoalescing::transform_only()));
+    pipeline.add_processor(Box::new(LiveVarAnalysisProcessor::track_all_usages()));
+    pipeline.add_processor(Box::new(DeadStoreElimination {}));
 }
 
 /// Disassemble the given compiled units and return the disassembled code as a string.

@@ -684,7 +684,7 @@ impl<'a> Transformer<'a> {
         temp: TempIndex,
     ) -> Vec<(Loc, String)> {
         if let Some(info) = self.live_var.get_info_at(code_offset).after.get(&temp) {
-            info.usages
+            info.usage_locations()
                 .iter()
                 .map(|loc| (loc.clone(), "used here".to_owned()))
                 .collect()

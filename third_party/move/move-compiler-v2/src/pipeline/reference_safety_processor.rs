@@ -3,6 +3,8 @@
 
 //! Implements memory safety analysis.
 //!
+//! prerequisite: livevar annotation is available by performing liveness analysis.
+//!
 //! This is an intra functional, forward-directed data flow analysis over the domain
 //! of what we call a *borrow graph*. The borrow graph tracks the creation of references from
 //! root memory locations and derivation of other references, by recording an edge for each
@@ -1318,7 +1320,7 @@ impl<'env, 'state> LifetimeAnalysisStep<'env, 'state> {
         let mut infos = vec![];
         for (temp, _) in cands {
             if let Some(info) = self.alive.after.get(&temp) {
-                for loc in &info.usages {
+                for loc in info.usage_locations().iter() {
                     infos.push((
                         loc.clone(),
                         format!(

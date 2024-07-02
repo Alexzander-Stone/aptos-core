@@ -148,10 +148,8 @@ module tic_tac_toe::ttt {
      */
     fun initalize_game(creator: &signer): Game {
         let v = vector::empty<u64>();
-        let i = 0;
-        while (i < GRID_SIZE) {
+        for (i in 0..GRID_SIZE) {
             vector::push_back(&mut v, EMPTY_CELL);
-            i = i + 1;
         };
 
         Game {
@@ -232,8 +230,7 @@ module tic_tac_toe::ttt {
      */
     fun check_player_win(game: &mut Game): bool {
         // check rows
-        let row = 0;
-        while (row < WIDTH_AND_HEIGHT) {
+        for(row in 0..WIDTH_AND_HEIGHT) {
             let r0 = vector::borrow(&game.board.vec, WIDTH_AND_HEIGHT * row + 0);
             let r1 = vector::borrow(&game.board.vec, WIDTH_AND_HEIGHT * row + 1);
             let r2 = vector::borrow(&game.board.vec, WIDTH_AND_HEIGHT * row + 2);
@@ -242,13 +239,10 @@ module tic_tac_toe::ttt {
             ) {
                 return true
             };
-
-            row = row + 1;
         };
 
         // check cols
-        let col = 0;
-        while (col < WIDTH_AND_HEIGHT) {
+        for(col in 0..WIDTH_AND_HEIGHT) {
             let c0 = vector::borrow(&game.board.vec, WIDTH_AND_HEIGHT * 0 + col);
             let c1 = vector::borrow(&game.board.vec, WIDTH_AND_HEIGHT * 1 + col);
             let c2 = vector::borrow(&game.board.vec, WIDTH_AND_HEIGHT * 2 + col);
@@ -257,8 +251,6 @@ module tic_tac_toe::ttt {
             ) {
                 return true
             };
-
-            col = col + 1;
         };
 
         // check diagonals

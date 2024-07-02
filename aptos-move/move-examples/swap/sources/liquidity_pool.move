@@ -149,10 +149,8 @@ module swap::liquidity_pool {
         let all_pools = &safe_liquidity_pool_configs().all_pools;
         let results = vector[];
         let len = smart_vector::length(all_pools);
-        let i = 0;
-        while (i < len) {
+        for (i in 0..len) {
             vector::push_back(&mut results, *smart_vector::borrow(all_pools, i));
-            i = i + 1;
         };
         results
     }
@@ -741,8 +739,7 @@ module swap::liquidity_pool {
     }
 
     fun get_y(x0: u256, xy: u256, y: u256): u256 {
-        let i = 0;
-        while (i < 255) {
+        for (i in 0..255) {
             let y_prev = y;
             let k = f(x0, y);
             if (k < xy) {
@@ -761,7 +758,6 @@ module swap::liquidity_pool {
                     return y
                 }
             };
-            i = i + 1;
         };
         y
     }

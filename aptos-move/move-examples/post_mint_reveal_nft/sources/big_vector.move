@@ -67,14 +67,11 @@ module post_mint_reveal_nft::big_vector {
     public fun append<T: store>(lhs: &mut BigVector<T>, other: BigVector<T>) {
         let other_len = length(&other);
         let half_other_len = other_len / 2;
-        let i = 0;
-        while (i < half_other_len) {
+        for (i in 0..half_other_len) {
             push_back(lhs, swap_remove(&mut other, i));
-            i = i + 1;
         };
-        while (i < other_len) {
+        for (i in half_other_len..other_len) {
             push_back(lhs, pop_back(&mut other));
-            i = i + 1;
         };
         destroy_empty(other);
     }
@@ -178,10 +175,8 @@ module post_mint_reveal_nft::big_vector {
     public fun reverse<T>(v: &mut BigVector<T>) {
         let len = length(v);
         let half_len = len / 2;
-        let k = 0;
-        while (k < half_len) {
+        for (k in 0..half_len) {
             swap(v, k, len - 1 - k);
-            k = k + 1;
         }
     }
 
@@ -189,13 +184,11 @@ module post_mint_reveal_nft::big_vector {
     /// element was found, and (false, 0) otherwise.
     /// Disclaimer: This function is costly. Use it at your own discretion.
     public fun index_of<T>(v: &BigVector<T>, val: &T): (bool, u64) {
-        let i = 0;
         let len = length(v);
-        while (i < len) {
+        for (i in 0..len) {
             if (borrow(v, i) == val) {
                 return (true, i)
             };
-            i = i + 1;
         };
         (false, 0)
     }
@@ -229,17 +222,14 @@ module post_mint_reveal_nft::big_vector {
     #[test]
     fun big_vector_test() {
         let v = empty(5);
-        let i = 0;
-        while (i < 100) {
+        for (i in 0..100) {
             push_back(&mut v, i);
-            i = i + 1;
         };
-        let j = 0;
-        while (j < 100) {
+        for (j in 0..100) {
             let val = borrow(&v, j);
             assert!(*val == j, 0);
-            j = j + 1;
         };
+        let i = 100;
         while (i > 0) {
             i = i - 1;
             let (exist, index) = index_of(&v, &i);
@@ -248,9 +238,8 @@ module post_mint_reveal_nft::big_vector {
             assert!(index == i, 0);
             assert!(j == i, 0);
         };
-        while (i < 100) {
+        for (i in 0..100) {
             push_back(&mut v, i);
-            i = i + 1;
         };
         let last_index = length(&v) - 1;
         assert!(swap_remove(&mut v, last_index) == 99, 0);
@@ -283,21 +272,16 @@ module post_mint_reveal_nft::big_vector {
     fun big_vector_append_test() {
         let v1 = empty(5);
         let v2 = empty(7);
-        let i = 0;
-        while (i < 7) {
+        for (i in 0..7) {
             push_back(&mut v1, i);
-            i = i + 1;
         };
-        while (i < 25) {
+        for (i in 7..25) {
             push_back(&mut v2, i);
-            i = i + 1;
         };
         append(&mut v1, v2);
         assert!(length(&v1) == 25, 0);
-        i = 0;
-        while (i < 25) {
+        for (i in 0..25) {
             assert!(*borrow(&v1, i) == i, 0);
-            i = i + 1;
         };
         destroy(v1);
     }
@@ -305,10 +289,8 @@ module post_mint_reveal_nft::big_vector {
     #[test]
     fun big_vector_remove_and_reverse_test() {
         let v = empty(11);
-        let i = 0;
-        while (i < 101) {
+        for (i in 0..101) {
             push_back(&mut v, i);
-            i = i + 1;
         };
         remove(&mut v, 100);
         remove(&mut v, 90);
@@ -324,13 +306,11 @@ module post_mint_reveal_nft::big_vector {
         assert!(length(&v) == 90, 0);
 
         let index = 0;
-        i = 0;
-        while (i < 101) {
+        for (i in 0..101) {
             if (i % 10 != 0) {
                 assert!(*borrow(&v, index) == i, 0);
                 index = index + 1;
             };
-            i = i + 1;
         };
         destroy(v);
     }
@@ -338,20 +318,14 @@ module post_mint_reveal_nft::big_vector {
     #[test]
     fun big_vector_swap_test() {
         let v = empty(11);
-        let i = 0;
-        while (i < 101) {
+        for (i in 0..101) {
             push_back(&mut v, i);
-            i = i + 1;
         };
-        i = 0;
-        while (i < 51) {
+        for (i in 0..51) {
             swap(&mut v, i, 100 - i);
-            i = i + 1;
         };
-        i = 0;
-        while (i < 101) {
+        for (i in 0..101) {
             assert!(*borrow(&v, i) == 100 - i, 0);
-            i = i + 1;
         };
         destroy(v);
     }
@@ -359,12 +333,10 @@ module post_mint_reveal_nft::big_vector {
     #[test]
     fun big_vector_index_of_test() {
         let v = empty(11);
-        let i = 0;
-        while (i < 100) {
+        for (i in 0..100) {
             push_back(&mut v, i);
             let (found, idx) = index_of(&mut v, &i);
             assert!(found && idx == i, 0);
-            i = i + 1;
         };
         destroy(v);
     }

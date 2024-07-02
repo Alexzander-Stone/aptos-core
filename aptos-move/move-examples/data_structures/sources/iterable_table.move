@@ -158,13 +158,11 @@ module aptos_std::iterable_table {
     #[test]
     fun iterable_table_test() {
         let table = new();
-        let i = 0;
-        while (i < 100) {
+        for (i in 0..100) {
             add(&mut table, i, i);
-            i = i + 1;
         };
         assert!(length(&table) == 100, 0);
-        i = 0;
+        let i = 0;
         while (i < 100) {
             assert!(remove(&mut table, i) == i, 0);
             i = i + 2;

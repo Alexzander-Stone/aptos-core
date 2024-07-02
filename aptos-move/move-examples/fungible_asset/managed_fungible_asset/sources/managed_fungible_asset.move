@@ -112,10 +112,8 @@ module example_addr::managed_fungible_asset {
         let length = vector::length(&stores);
         assert!(length == vector::length(&amounts), error::invalid_argument(ERR_VECTORS_LENGTH_MISMATCH));
         let mint_ref = authorized_borrow_mint_ref(admin, asset);
-        let i = 0;
-        while (i < length) {
+        for (i in 0..length) {
             fungible_asset::mint_to(mint_ref, *vector::borrow(&stores, i), *vector::borrow(&amounts, i));
-            i = i + 1;
         }
     }
 
@@ -151,15 +149,13 @@ module example_addr::managed_fungible_asset {
         assert!(length == vector::length(&receiver_stores), error::invalid_argument(ERR_VECTORS_LENGTH_MISMATCH));
         assert!(length == vector::length(&amounts), error::invalid_argument(ERR_VECTORS_LENGTH_MISMATCH));
         let transfer_ref = authorized_borrow_transfer_ref(admin, asset);
-        let i = 0;
-        while (i < length) {
+        for (i in 0..length) {
             fungible_asset::transfer_with_ref(
                 transfer_ref,
                 *vector::borrow(&sender_stores, i),
                 *vector::borrow(&receiver_stores, i),
                 *vector::borrow(&amounts, i)
             );
-            i = i + 1;
         }
     }
 
@@ -187,10 +183,8 @@ module example_addr::managed_fungible_asset {
         let length = vector::length(&stores);
         assert!(length == vector::length(&amounts), error::invalid_argument(ERR_VECTORS_LENGTH_MISMATCH));
         let burn_ref = authorized_borrow_burn_ref(admin, asset);
-        let i = 0;
-        while (i < length) {
+        for (i in 0..length) {
             fungible_asset::burn_from(burn_ref, *vector::borrow(&stores, i), *vector::borrow(&amounts, i));
-            i = i + 1;
         };
     }
 
@@ -246,16 +240,14 @@ module example_addr::managed_fungible_asset {
         let length = vector::length(&stores);
         assert!(length == vector::length(&amounts), error::invalid_argument(ERR_VECTORS_LENGTH_MISMATCH));
         let transfer_ref = authorized_borrow_transfer_ref(admin, asset);
-        let i = 0;
         let sum = fungible_asset::zero(asset);
-        while (i < length) {
+        for (i in 0..length) {
             let fa = fungible_asset::withdraw_with_ref(
                 transfer_ref,
                 *vector::borrow(&stores, i),
                 *vector::borrow(&amounts, i)
             );
             fungible_asset::merge(&mut sum, fa);
-            i = i + 1;
         };
         sum
     }
@@ -286,15 +278,13 @@ module example_addr::managed_fungible_asset {
         let length = vector::length(&stores);
         assert!(length == vector::length(&amounts), error::invalid_argument(ERR_VECTORS_LENGTH_MISMATCH));
         let transfer_ref = authorized_borrow_transfer_ref(admin, fungible_asset::asset_metadata(fa));
-        let i = 0;
-        while (i < length) {
+        for (i in 0..length) {
             let split_fa = fungible_asset::extract(fa, *vector::borrow(&amounts, i));
             fungible_asset::deposit_with_ref(
                 transfer_ref,
                 *vector::borrow(&stores, i),
                 split_fa,
             );
-            i = i + 1;
         };
     }
 

@@ -703,15 +703,13 @@ module post_mint_reveal_nft::minting {
         let property_keys = vector::empty<vector<String>>();
         let property_values = vector::empty<vector<vector<u8>>>();
         let property_types = vector::empty<vector<String>>();
-        let i = 0;
-        while (i < 3) {
+        for (i in 0..3) {
             let token_uri = utf8(b"token uri");
             string::append(&mut token_uri, u64_to_string(i));
             vector::push_back(&mut token_uris, token_uri);
             vector::push_back(&mut property_keys, vector::empty<String>());
             vector::push_back(&mut property_values, vector::empty<vector<u8>>());
             vector::push_back(&mut property_types, vector::empty<String>());
-            i = i + 1;
         };
         add_tokens(admin_account, token_uris, property_keys, property_values, property_types);
     }
@@ -1156,12 +1154,10 @@ module post_mint_reveal_nft::minting {
         let property_keys = vector::empty<vector<String>>();
         let property_values = vector::empty<vector<vector<u8>>>();
         let property_types = vector::empty<vector<String>>();
-        let i = 0;
-        while (i < 3) {
+        for (i in 0..3) {
             vector::push_back(&mut token_uris, utf8(b"token uri"));
             vector::push_back(&mut property_keys, vector::empty<String>());
             vector::push_back(&mut property_values, vector::empty<vector<u8>>());
-            i = i + 1;
         };
         add_tokens(&admin_account, token_uris, property_keys, property_values, property_types);
     }

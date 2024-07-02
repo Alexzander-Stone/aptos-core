@@ -17,15 +17,14 @@ module event::event {
     }
 
     public entry fun emit(num: u64) {
-        let i = 0;
-        while (i < num) {
+
+        for (i in 0..num) {
             let event = MyEvent {
                 seq: i,
                 field: Field { field: false },
                 bytes: vector[]
             };
             event::emit(event);
-            i = i + 1;
         }
     }
 
@@ -46,22 +45,20 @@ module event::event {
         emit(20);
         let module_events = event::emitted_events<MyEvent>();
         assert!(vector::length(&module_events) == 20, 0);
-        let i = 0;
-        while (i < 20) {
+        for (i in 0..20) {
             let event = MyEvent {
                 seq: i,
                 field: Field {field: false},
                 bytes: vector[]
             };
             assert!(vector::borrow(&module_events, i) == &event, i);
-            i = i + 1;
         };
         let event = MyEvent {
             seq: 0,
             field: Field { field: false },
             bytes: vector[]
         };
-        assert!(event::was_event_emitted(&event), i);
+        assert!(event::was_event_emitted(&event), 20);
     }
 
     #[test]

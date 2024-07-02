@@ -66,15 +66,12 @@ module post_mint_reveal_nft::whitelist {
         };
         let whitelist_mint_config = borrow_global<WhitelistMintConfig>(module_address);
         let now = timestamp::now_seconds();
-
-        let i = 0;
-        while (i < vector::length(&whitelist_mint_config.whitelist_configs)) {
+        for (i in 0..vector::length(&whitelist_mint_config.whitelist_configs)) {
             let whitelist_stage = vector::borrow(&whitelist_mint_config.whitelist_configs, i);
             if (whitelist_stage.whitelist_minting_start_time <= now && now < whitelist_stage.whitelist_minting_end_time) {
                 let user_is_eligible_for_current_whitelisted_minting = bucket_table::contains(&whitelist_stage.whitelisted_address, &minter_address);
                 return (whitelist_stage.whitelist_mint_price, i, user_is_eligible_for_current_whitelisted_minting)
-                };
-            i = i + 1;
+            };
         };
 
         (0, 0, false)

@@ -77,15 +77,14 @@ module drand::drand {
 
         // We can convert the 256 uniform bits in `randomness` into a uniform 64-bit number `w \in [0, max)` by
         // taking the last 128 bits in `randomness` modulo `max`.
-        let num : u256 = 0;
+        let num: u256 = 0;
         let max_256 = (max as u256);
 
         // Ugh, we have to manually deserialize this into a u128
-        while (!vector::is_empty(&entropy)) {
-            let byte = vector::pop_back(&mut entropy);
+        vector::for_each_reverse(entropy, |byte| {
             num = num << 8;
             num = num + (byte as u256);
-        };
+        });
 
         ((num % max_256) as u64)
     }

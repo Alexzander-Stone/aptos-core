@@ -38,13 +38,13 @@ module bcs_stream::bcs_stream {
 
     /// Deserializes a ULEB128-encoded integer from the stream.
     /// In the BCS format, lengths of vectors are represented using ULEB128 encoding.
-    public fun deserialize_uleb128(stream: &mut BCSStream): u64 {
+    public fun deserialize_uleb128(self: &mut BCSStream): u64 {
         let res = 0;
         let shift = 0;
 
-        while (stream.cur < vector::length(&stream.data)) {
-            let byte = *vector::borrow(&stream.data, stream.cur);
-            stream.cur = stream.cur + 1;
+        while (self.cur < vector::length(&self.data)) {
+            let byte = *vector::borrow(&self.data, self.cur);
+            self.cur = self.cur + 1;
 
             let val = ((byte & 0x7f) as u64);
             if (((val << shift) >> shift) != val) {
@@ -69,10 +69,10 @@ module bcs_stream::bcs_stream {
     }
 
     /// Deserializes a `bool` value from the stream.
-    public fun deserialize_bool(stream: &mut BCSStream): bool {
-        assert!(stream.cur < vector::length(&stream.data), error::out_of_range(EOUT_OF_BYTES));
-        let byte = *vector::borrow(&stream.data, stream.cur);
-        stream.cur = stream.cur + 1;
+    public fun deserialize_bool(self: &mut BCSStream): bool {
+        assert!(self.cur < vector::length(&self.data), error::out_of_range(EOUT_OF_BYTES));
+        let byte = *vector::borrow(&self.data, self.cur);
+        self.cur = self.cur + 1;
         if (byte == 0) {
             false
         } else if (byte == 1) {
@@ -86,36 +86,36 @@ module bcs_stream::bcs_stream {
     /// 32-byte `address` values are serialized using little-endian byte order.
     /// This function utilizes the `to_address` function from the `aptos_std::from_bcs` module,
     /// because the Move type system does not permit per-byte referencing of addresses.
-    public fun deserialize_address(stream: &mut BCSStream): address {
-        let data = &stream.data;
-        let cur = stream.cur;
+    public fun deserialize_address(self: &mut BCSStream): address {
+        let data = &self.data;
+        let cur = self.cur;
 
         assert!(cur + 32 <= vector::length(data), error::out_of_range(EOUT_OF_BYTES));
         let res = from_bcs::to_address(vector::slice(data, cur, cur + 32));
 
-        stream.cur = cur + 32;
+        self.cur = cur + 32;
         res
     }
 
     /// Deserializes a `u8` value from the stream.
     /// 1-byte `u8` values are serialized using little-endian byte order.
-    public fun deserialize_u8(stream: &mut BCSStream): u8 {
-        let data = &stream.data;
-        let cur = stream.cur;
+    public fun deserialize_u8(self: &mut BCSStream): u8 {
+        let data = &self.data;
+        let cur = self.cur;
 
         assert!(cur < vector::length(data), error::out_of_range(EOUT_OF_BYTES));
 
         let res = *vector::borrow(data, cur);
 
-        stream.cur = cur + 1;
+        self.cur = cur + 1;
         res
     }
 
     /// Deserializes a `u16` value from the stream.
     /// 2-byte `u16` values are serialized using little-endian byte order.
-    public fun deserialize_u16(stream: &mut BCSStream): u16 {
-        let data = &stream.data;
-        let cur = stream.cur;
+    public fun deserialize_u16(self: &mut BCSStream): u16 {
+        let data = &self.data;
+        let cur = self.cur;
 
         assert!(cur + 2 <= vector::length(data), error::out_of_range(EOUT_OF_BYTES));
         let res =
@@ -123,15 +123,15 @@ module bcs_stream::bcs_stream {
                 ((*vector::borrow(data, cur + 1) as u16) << 8)
         ;
 
-        stream.cur = stream.cur + 2;
+        self.cur = self.cur + 2;
         res
     }
 
     /// Deserializes a `u32` value from the stream.
     /// 4-byte `u32` values are serialized using little-endian byte order.
-    public fun deserialize_u32(stream: &mut BCSStream): u32 {
-        let data = &stream.data;
-        let cur = stream.cur;
+    public fun deserialize_u32(self: &mut BCSStream): u32 {
+        let data = &self.data;
+        let cur = self.cur;
 
         assert!(cur + 4 <= vector::length(data), error::out_of_range(EOUT_OF_BYTES));
         let res =
@@ -141,15 +141,15 @@ module bcs_stream::bcs_stream {
                 ((*vector::borrow(data, cur + 3) as u32) << 24)
         ;
 
-        stream.cur = stream.cur + 4;
+        self.cur = self.cur + 4;
         res
     }
 
     /// Deserializes a `u64` value from the stream.
     /// 8-byte `u64` values are serialized using little-endian byte order.
-    public fun deserialize_u64(stream: &mut BCSStream): u64 {
-        let data = &stream.data;
-        let cur = stream.cur;
+    public fun deserialize_u64(self: &mut BCSStream): u64 {
+        let data = &self.data;
+        let cur = self.cur;
 
         assert!(cur + 8 <= vector::length(data), error::out_of_range(EOUT_OF_BYTES));
         let res =
@@ -163,15 +163,15 @@ module bcs_stream::bcs_stream {
                 ((*vector::borrow(data, cur + 7) as u64) << 56)
         ;
 
-        stream.cur = stream.cur + 8;
+        self.cur = self.cur + 8;
         res
     }
 
     /// Deserializes a `u128` value from the stream.
     /// 16-byte `u128` values are serialized using little-endian byte order.
-    public fun deserialize_u128(stream: &mut BCSStream): u128 {
-        let data = &stream.data;
-        let cur = stream.cur;
+    public fun deserialize_u128(self: &mut BCSStream): u128 {
+        let data = &self.data;
+        let cur = self.cur;
 
         assert!(cur + 16 <= vector::length(data), error::out_of_range(EOUT_OF_BYTES));
         let res =
@@ -193,15 +193,15 @@ module bcs_stream::bcs_stream {
                 ((*vector::borrow(data, cur + 15) as u128) << 120)
         ;
 
-        stream.cur = stream.cur + 16;
+        self.cur = self.cur + 16;
         res
     }
 
     /// Deserializes a `u256` value from the stream.
     /// 32-byte `u256` values are serialized using little-endian byte order.
-    public fun deserialize_u256(stream: &mut BCSStream): u256 {
-        let data = &stream.data;
-        let cur = stream.cur;
+    public fun deserialize_u256(self: &mut BCSStream): u256 {
+        let data = &self.data;
+        let cur = self.cur;
 
         assert!(cur + 32 <= vector::length(data), error::out_of_range(EOUT_OF_BYTES));
         let res =
@@ -239,7 +239,7 @@ module bcs_stream::bcs_stream {
                 ((*vector::borrow(data, cur + 31) as u256) << 248)
         ;
 
-        stream.cur = stream.cur + 32;
+        self.cur = self.cur + 32;
         res
     }
 
@@ -249,20 +249,20 @@ module bcs_stream::bcs_stream {
             data: data,
             cur: cursor,
         };
-        deserialize_u256(&mut stream);
+        stream.deserialize_u256();
     }
 
     /// Deserializes an array of BCS deserializable elements from the stream.
     /// First, reads the length of the vector, which is in uleb128 format.
     /// After determining the length, it then reads the contents of the vector.
     /// The `elem_deserializer` lambda expression is used sequentially to deserialize each element of the vector.
-    public inline fun deserialize_vector<E>(stream: &mut BCSStream, elem_deserializer: |&mut BCSStream| E): vector<E> {
-        let len = deserialize_uleb128(stream);
+    public inline fun deserialize_vector<E>(self: &mut BCSStream, elem_deserializer: |&mut BCSStream| E): vector<E> {
+        let len = self.deserialize_uleb128();
         let v = vector::empty();
 
         let i = 0;
         while (i < len) {
-            vector::push_back(&mut v, elem_deserializer(stream));
+            vector::push_back(&mut v, elem_deserializer(self));
             i = i + 1;
         };
 
@@ -272,15 +272,15 @@ module bcs_stream::bcs_stream {
     /// Deserializes utf-8 `String` from the stream.
     /// First, reads the length of the String, which is in uleb128 format.
     /// After determining the length, it then reads the contents of the String.
-    public fun deserialize_string(stream: &mut BCSStream): String {
-        let len = deserialize_uleb128(stream);
-        let data = &stream.data;
-        let cur = stream.cur;
+    public fun deserialize_string(self: &mut BCSStream): String {
+        let len = self.deserialize_uleb128();
+        let data = &self.data;
+        let cur = self.cur;
 
         assert!(cur + len <= vector::length(data), error::out_of_range(EOUT_OF_BYTES));
 
         let res = string::utf8(vector::slice(data, cur, cur + len));
-        stream.cur = cur + len;
+        self.cur = cur + len;
 
         res
     }
@@ -289,10 +289,10 @@ module bcs_stream::bcs_stream {
     /// First, reads a single byte representing the presence (0x01) or absence (0x00) of data.
     /// After determining the presence of data, it then reads the actual data if present.
     /// The `elem_deserializer` lambda expression is used to deserialize the element contained within the `Option`.
-    public inline fun deserialize_option<E>(stream: &mut BCSStream, elem_deserializer: |&mut BCSStream| E): Option<E> {
-        let is_data = deserialize_bool(stream);
+    public inline fun deserialize_option<E>(self: &mut BCSStream, elem_deserializer: |&mut BCSStream| E): Option<E> {
+        let is_data = self.deserialize_bool();
         if (is_data) {
-            option::some(elem_deserializer(stream))
+            option::some(elem_deserializer(self))
         } else {
             option::none()
         }

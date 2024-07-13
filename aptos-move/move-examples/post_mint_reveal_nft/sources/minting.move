@@ -590,7 +590,7 @@ module post_mint_reveal_nft::minting {
         // mint token to the receiver
         let resource_signer = create_signer_with_capability(&nft_mint_config.signer_cap);
 
-        while (amount > 0) {
+        for (i in 0..amount) {
             let token_name = source_token.source_token_name_base;
             string::append_utf8(&mut token_name, b": ");
             let num = u64_to_string(source_token.source_token_counter);
@@ -617,7 +617,6 @@ module post_mint_reveal_nft::minting {
             );
 
             source_token.source_token_counter = source_token.source_token_counter + 1;
-            amount = amount - 1;
         };
     }
 

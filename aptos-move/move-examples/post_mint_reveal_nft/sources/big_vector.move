@@ -112,9 +112,8 @@ module post_mint_reveal_nft::big_vector {
     public fun remove<T>(v: &mut BigVector<T>, i: u64): T {
         let len = length(v);
         assert!(i < len, error::invalid_argument(EINDEX_OUT_OF_BOUNDS));
-        while (i + 1 < len) {
-            swap(v, i, i + 1);
-            i = i + 1;
+        for (j in i..(len-1)) {
+            swap(v, j, j + 1);
         };
         pop_back(v)
     }

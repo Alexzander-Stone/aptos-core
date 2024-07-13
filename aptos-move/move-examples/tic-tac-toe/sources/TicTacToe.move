@@ -298,9 +298,8 @@ module tic_tac_toe::ttt {
         } = game;
         option::destroy_some(player_x);
         option::destroy_some(player_o);
-        while (!vector::is_empty(&vec)) {
-            vector::pop_back(&mut vec);
-        };
+
+        vector::destroy(vec, |e|{});
     }
 
 

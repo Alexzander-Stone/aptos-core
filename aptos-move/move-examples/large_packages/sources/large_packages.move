@@ -42,15 +42,15 @@ module large_packages::large_packages {
         let staging_area = borrow_global_mut<StagingArea>(owner_address);
         vector::append(&mut staging_area.metadata_serialized, metadata_serialized);
 
-        while (!vector::is_empty(&code_chunks)) {
-            let inner_code = vector::pop_back(&mut code_chunks);
+        vector::for_each(code_chunks, |inner_code|{
             let idx = (vector::pop_back(&mut code_indices) as u64);
-            while (vector::length(&staging_area.code) <= idx) {
+
+            for(i in vector::length(&staging_area.code)..idx+1) {
                 vector::push_back(&mut staging_area.code, vector::empty());
             };
             let source_code = vector::borrow_mut(&mut staging_area.code, idx);
             vector::append(source_code, inner_code)
-        };
+        });
 
         let _ = staging_area;
 

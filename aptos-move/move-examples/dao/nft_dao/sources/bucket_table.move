@@ -113,10 +113,9 @@ module dao_platform::bucket_table {
                 i = i + 1;
             };
         };
-        while (j < len) {
+        for(i in j..len) {
             let entry = vector::pop_back(old_bucket);
             vector::push_back(&mut new_bucket, entry);
-            len = len - 1;
         };
         table_with_length::add(&mut map.buckets, new_bucket_index, new_bucket);
     }
@@ -201,8 +200,7 @@ module dao_platform::bucket_table {
 
     /// Reserve `additional_buckets` more buckets.
     public fun split<K, V>(map: &mut BucketTable<K, V>, additional_buckets: u64) {
-        while (additional_buckets > 0) {
-            additional_buckets = additional_buckets - 1;
+        for(i in 0..additional_buckets) {
             split_one_bucket(map);
         }
     }

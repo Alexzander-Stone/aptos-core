@@ -65,9 +65,7 @@ module drand::lottery_test {
         // We pop_back, so we reverse the vector to simulate pop_front
         vector::reverse(&mut vec_signed_bytes);
 
-        while(!vector::is_empty(&vec_signed_bytes)) {
-            let signed_bytes = vector::pop_back(&mut vec_signed_bytes);
-
+        vector::for_each_reverse(vec_signed_bytes, |signed_bytes| {
             // Create fake coins for users participating in lottery & initialize aptos_framework
             give_coins(&mint_cap, &u1);
             give_coins(&mint_cap, &u2);
@@ -86,7 +84,7 @@ module drand::lottery_test {
             // Shift the next lottery's start time a little (otherwise, timestamp::update_global_time_for_test fails
             // when resetting the time back to the past).
             lottery_start_time_secs = lottery_start_time_secs + 2 * lottery_duration;
-        };
+        });
 
         // Clean up
         coin::destroy_burn_cap<AptosCoin>(burn_cap);

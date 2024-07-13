@@ -42,6 +42,7 @@ module bcs_stream::bcs_stream {
         let res = 0;
         let shift = 0;
 
+
         while (stream.cur < vector::length(&stream.data)) {
             let byte = *vector::borrow(&stream.data, stream.cur);
             stream.cur = stream.cur + 1;

@@ -46,7 +46,7 @@ module bcs_stream::tests {
             i: stream.deserialize_address(),
             j: stream.deserialize_string(),
             k: stream.deserialize_option(
-                |stream| { stream.deserialize_vector(|stream_| { stream_.deserialize_Bar() }) }
+                |stream| { stream.deserialize_vector(|stream_| { deserialize_Bar(stream_) }) }
             ),
         }
     }
@@ -465,8 +465,8 @@ module bcs_stream::tests {
         let data = x"010B736F6D6520737472696E67";
         let stream = bcs_stream::new(data);
         assert!(
-            deserialize_option(
-                |stream| { stream.deserialize_string() }
+            stream.deserialize_option(
+                |stream_| { stream_.deserialize_string() }
             ) == option::some(string::utf8(b"some string")),
             0
         );
@@ -489,7 +489,7 @@ module bcs_stream::tests {
         vector::append(&mut data, x"0102010000020001"); // Option
 
         let stream = bcs_stream::new(data);
-        let some_foo = stream.deserialize_option(|stream| { stream.deserialize_Foo() });
+        let some_foo = stream.deserialize_option(|stream| { deserialize_Foo(stream) });
 
         let expected = option::some(Foo {
             a: 1,

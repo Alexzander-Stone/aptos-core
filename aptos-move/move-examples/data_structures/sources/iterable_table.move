@@ -28,129 +28,129 @@ module aptos_std::iterable_table {
     }
 
     /// Destroy a table. The table must be empty to succeed.
-    public fun destroy_empty<K: copy + store + drop, V: store>(table: IterableTable<K, V>) {
-        assert!(empty(&table), 0);
-        assert!(option::is_none(&table.head), 0);
-        assert!(option::is_none(&table.tail), 0);
-        let IterableTable {inner, head: _, tail: _} = table;
+    public fun destroy_empty<K: copy + store + drop, V: store>(self: IterableTable<K, V>) {
+        assert!(self.empty(), 0);
+        assert!(option::is_none(&self.head), 0);
+        assert!(option::is_none(&self.tail), 0);
+        let IterableTable {inner, head: _, tail: _} = self;
         table_with_length::destroy_empty(inner);
     }
 
     /// Add a new entry to the table. Aborts if an entry for this
     /// key already exists.
-    public fun add<K: copy + store + drop, V: store>(table: &mut IterableTable<K, V>, key: K, val: V) {
+    public fun add<K: copy + store + drop, V: store>(self: &mut IterableTable<K, V>, key: K, val: V) {
         let wrapped_value = IterableValue {
             val,
-            prev: table.tail,
+            prev: self.tail,
             next: option::none(),
         };
-        table_with_length::add(&mut table.inner, key, wrapped_value);
-        if (option::is_some(&table.tail)) {
-            let k = option::borrow(&table.tail);
-            table_with_length::borrow_mut(&mut table.inner, *k).next = option::some(key);
+        table_with_length::add(&mut self.inner, key, wrapped_value);
+        if (option::is_some(&self.tail)) {
+            let k = option::borrow(&self.tail);
+            table_with_length::borrow_mut(&mut self.inner, *k).next = option::some(key);
         } else {
-            table.head = option::some(key);
+            self.head = option::some(key);
         };
-        table.tail = option::some(key);
+        self.tail = option::some(key);
     }
 
     /// Remove from `table` and return the value which `key` maps to.
     /// Aborts if there is no entry for `key`.
-    public fun remove<K: copy + store + drop, V: store>(table: &mut IterableTable<K, V>, key: K): V {
-        let (val, _, _) = remove_iter(table, key);
+    public fun remove<K: copy + store + drop, V: store>(self: &mut IterableTable<K, V>, key: K): V {
+        let (val, _, _) = self.remove_iter(key);
         val
     }
 
     /// Acquire an immutable reference to the value which `key` maps to.
     /// Aborts if there is no entry for `key`.
-    public fun borrow<K: copy + store + drop, V: store>(table: &IterableTable<K, V>, key: K): &V {
-        &table_with_length::borrow(&table.inner, key).val
+    public fun borrow<K: copy + store + drop, V: store>(self: &IterableTable<K, V>, key: K): &V {
+        &table_with_length::borrow(&self.inner, key).val
     }
 
     /// Acquire a mutable reference to the value which `key` maps to.
     /// Aborts if there is no entry for `key`.
-    public fun borrow_mut<K: copy + store + drop, V: store>(table: &mut IterableTable<K, V>, key: K): &mut V {
-        &mut table_with_length::borrow_mut(&mut table.inner, key).val
+    public fun borrow_mut<K: copy + store + drop, V: store>(self: &mut IterableTable<K, V>, key: K): &mut V {
+        &mut table_with_length::borrow_mut(&mut self.inner, key).val
     }
 
     /// Acquire a mutable reference to the value which `key` maps to.
     /// Insert the pair (`key`, `default`) first if there is no entry for `key`.
-    public fun borrow_mut_with_default<K: copy + store + drop, V: store + drop>(table: &mut IterableTable<K, V>, key: K, default: V): &mut V {
-        if (!contains(table, key)) {
-            add(table, key, default)
+    public fun borrow_mut_with_default<K: copy + store + drop, V: store + drop>(self: &mut IterableTable<K, V>, key: K, default: V): &mut V {
+        if (!self.contains(key)) {
+            self.add(key, default)
         };
-        borrow_mut(table, key)
+        self.borrow_mut(key)
     }
 
     /// Returns the length of the table, i.e. the number of entries.
-    public fun length<K: copy + store + drop, V: store>(table: &IterableTable<K, V>): u64 {
-        table_with_length::length(&table.inner)
+    public fun length<K: copy + store + drop, V: store>(self: &IterableTable<K, V>): u64 {
+        table_with_length::length(&self.inner)
     }
 
     /// Returns true if this table is empty.
-    public fun empty<K: copy + store + drop, V: store>(table: &IterableTable<K, V>): bool {
-        table_with_length::empty(&table.inner)
+    public fun empty<K: copy + store + drop, V: store>(self: &IterableTable<K, V>): bool {
+        table_with_length::empty(&self.inner)
     }
 
     /// Returns true iff `table` contains an entry for `key`.
-    public fun contains<K: copy + store + drop, V: store>(table: &IterableTable<K, V>, key: K): bool {
-        table_with_length::contains(&table.inner, key)
+    public fun contains<K: copy + store + drop, V: store>(self: &IterableTable<K, V>, key: K): bool {
+        table_with_length::contains(&self.inner, key)
     }
 
     /// Iterable API.
 
     /// Returns the key of the head for iteration.
-    public fun head_key<K: copy + store + drop, V: store>(table: &IterableTable<K, V>): Option<K> {
-        table.head
+    public fun head_key<K: copy + store + drop, V: store>(self: &IterableTable<K, V>): Option<K> {
+        self.head
     }
 
     /// Returns the key of the tail for iteration.
-    public fun tail_key<K: copy + store + drop, V: store>(table: &IterableTable<K, V>): Option<K> {
-        table.tail
+    public fun tail_key<K: copy + store + drop, V: store>(self: &IterableTable<K, V>): Option<K> {
+        self.tail
     }
 
     /// Acquire an immutable reference to the IterableValue which `key` maps to.
     /// Aborts if there is no entry for `key`.
-    public fun borrow_iter<K: copy + store + drop, V: store>(table: &IterableTable<K, V>, key: K): (&V, Option<K>, Option<K>) {
-        let v = table_with_length::borrow(&table.inner, key);
+    public fun borrow_iter<K: copy + store + drop, V: store>(self: &IterableTable<K, V>, key: K): (&V, Option<K>, Option<K>) {
+        let v = table_with_length::borrow(&self.inner, key);
         (&v.val, v.prev, v.next)
     }
 
     /// Acquire a mutable reference to the value and previous/next key which `key` maps to.
     /// Aborts if there is no entry for `key`.
-    public fun borrow_iter_mut<K: copy + store + drop, V: store>(table: &mut IterableTable<K, V>, key: K): (&mut V, Option<K>, Option<K>) {
-        let v = table_with_length::borrow_mut(&mut table.inner, key);
+    public fun borrow_iter_mut<K: copy + store + drop, V: store>(self: &mut IterableTable<K, V>, key: K): (&mut V, Option<K>, Option<K>) {
+        let v = table_with_length::borrow_mut(&mut self.inner, key);
         (&mut v.val, v.prev, v.next)
     }
 
     /// Remove from `table` and return the value and previous/next key which `key` maps to.
     /// Aborts if there is no entry for `key`.
-    public fun remove_iter<K: copy + store + drop, V: store>(table: &mut IterableTable<K, V>, key: K): (V, Option<K>, Option<K>) {
-        let val = table_with_length::remove(&mut table.inner, copy key);
-        if (option::contains(&table.tail, &key)) {
-            table.tail = val.prev;
+    public fun remove_iter<K: copy + store + drop, V: store>(self: &mut IterableTable<K, V>, key: K): (V, Option<K>, Option<K>) {
+        let val = table_with_length::remove(&mut self.inner, copy key);
+        if (option::contains(&self.tail, &key)) {
+            self.tail = val.prev;
         };
-        if (option::contains(&table.head, &key)) {
-            table.head = val.next;
+        if (option::contains(&self.head, &key)) {
+            self.head = val.next;
         };
         if (option::is_some(&val.prev)) {
             let key = option::borrow(&val.prev);
-            table_with_length::borrow_mut(&mut table.inner, *key).next = val.next;
+            table_with_length::borrow_mut(&mut self.inner, *key).next = val.next;
         };
         if (option::is_some(&val.next)) {
             let key = option::borrow(&val.next);
-            table_with_length::borrow_mut(&mut table.inner, *key).prev = val.prev;
+            table_with_length::borrow_mut(&mut self.inner, *key).prev = val.prev;
         };
         let IterableValue {val, prev, next} = val;
         (val, prev, next)
     }
 
     /// Remove all items from v2 and append to v1.
-    public fun append<K: copy + store + drop, V: store>(v1: &mut IterableTable<K, V>, v2: &mut IterableTable<K, V>) {
-        let key = head_key(v2);
+    public fun append<K: copy + store + drop, V: store>(self: &mut IterableTable<K, V>, v2: &mut IterableTable<K, V>) {
+        let key = v2.head_key();
         while (option::is_some(&key)) {
-            let (val, _, next) = remove_iter(v2, *option::borrow(&key));
-            add(v1, *option::borrow(&key), val);
+            let (val, _, next) = v2.remove_iter(*option::borrow(&key));
+            self.add(*option::borrow(&key), val);
             key = next;
         };
     }
@@ -160,34 +160,34 @@ module aptos_std::iterable_table {
         let table = new();
         let i = 0;
         while (i < 100) {
-            add(&mut table, i, i);
+            table.add(i, i);
             i = i + 1;
         };
-        assert!(length(&table) == 100, 0);
+        assert!(table.length() == 100, 0);
         i = 0;
         while (i < 100) {
-            assert!(remove(&mut table, i) == i, 0);
+            assert!(table.remove(i) == i, 0);
             i = i + 2;
         };
-        assert!(!empty(&table), 0);
-        let key = head_key(&table);
+        assert!(!table.empty(), 0);
+        let key = table.head_key();
         i = 1;
         while (option::is_some(&key)) {
-            let (val, _, next) = borrow_iter(&table, *option::borrow(&key));
+            let (val, _, next) = table.borrow_iter(*option::borrow(&key));
             assert!(*val == i, 0);
             key = next;
             i = i + 2;
         };
         assert!(i == 101, 0);
         let table2 = new();
-        append(&mut table2, &mut table);
-        destroy_empty(table);
-        let key = tail_key(&table2);
+        table2.append(&mut table);
+        table.destroy_empty();
+        let key = table2.tail_key();
         while (option::is_some(&key)) {
-            let (val, prev, _) = remove_iter(&mut table2, *option::borrow(&key));
+            let (val, prev, _) = table2.remove_iter(*option::borrow(&key));
             assert!(val == *option::borrow(&key), 0);
             key = prev;
         };
-        destroy_empty(table2);
+        table2.destroy_empty();
     }
 }

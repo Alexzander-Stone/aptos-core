@@ -429,17 +429,17 @@ module dao_platform::nft_dao {
             let property_version = *vector::borrow(&property_versions, i);
             let token_id = token::create_token_id_raw(gtoken.creator, gtoken.collection, token_name, property_version);
             // check if this token already voted
-            assert!(!bucket_table::contains(&stats.no_votes, &token_id), error::invalid_argument(ETOKEN_ALREADY_VOTED));
-            assert!(!bucket_table::contains(&stats.yes_votes, &token_id), error::invalid_argument(ETOKEN_ALREADY_VOTED));
+            assert!(!stats.no_votes.contains(&token_id), error::invalid_argument(ETOKEN_ALREADY_VOTED));
+            assert!(!stats.yes_votes.contains(&token_id), error::invalid_argument(ETOKEN_ALREADY_VOTED));
 
             // this account owns the token
             assert!(token::balance_of(signer::address_of(account), token_id) == 1, error::permission_denied(ENOT_OWN_THE_VOTING_DAO_TOKEN));
             if (vote) {
                 stats.total_yes = stats.total_yes + 1;
-                bucket_table::add(&mut stats.yes_votes, token_id, voter_addr);
+                stats.yes_votes.add(token_id, voter_addr);
             } else {
                 stats.total_no = stats.total_no + 1;
-                bucket_table::add(&mut stats.no_votes, token_id, voter_addr);
+                stats.no_votes.add(token_id, voter_addr);
             };
         });
 

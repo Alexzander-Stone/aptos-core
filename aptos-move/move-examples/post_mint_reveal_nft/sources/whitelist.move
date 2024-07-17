@@ -71,7 +71,7 @@ module post_mint_reveal_nft::whitelist {
         while (i < vector::length(&whitelist_mint_config.whitelist_configs)) {
             let whitelist_stage = vector::borrow(&whitelist_mint_config.whitelist_configs, i);
             if (whitelist_stage.whitelist_minting_start_time <= now && now < whitelist_stage.whitelist_minting_end_time) {
-                let user_is_eligible_for_current_whitelisted_minting = bucket_table::contains(&whitelist_stage.whitelisted_address, &minter_address);
+                let user_is_eligible_for_current_whitelisted_minting = whitelist_stage.whitelisted_address.contains(&minter_address);
                 return (whitelist_stage.whitelist_mint_price, i, user_is_eligible_for_current_whitelisted_minting)
                 };
             i = i + 1;
@@ -93,8 +93,8 @@ module post_mint_reveal_nft::whitelist {
         let whitelist_mint_config = borrow_global_mut<WhitelistMintConfig>(module_address);
         assert!(stage < vector::length(&whitelist_mint_config.whitelist_configs), error::invalid_argument(EINVALID_STAGE));
         let whitelist_stage = vector::borrow_mut(&mut whitelist_mint_config.whitelist_configs, stage);
-        assert!(bucket_table::contains(&whitelist_stage.whitelisted_address, &minter_address), error::permission_denied(EACCOUNT_NOT_WHITELISTED));
-        let remaining_minting_amount = bucket_table::borrow_mut(&mut whitelist_stage.whitelisted_address, minter_address);
+        assert!(whitelist_stage.whitelisted_address.contains(&minter_address), error::permission_denied(EACCOUNT_NOT_WHITELISTED));
+        let remaining_minting_amount = whitelist_stage.whitelisted_address.borrow_mut(minter_address);
         assert!(*remaining_minting_amount >= user_minting_amount, error::invalid_argument(EEXCEEDS_MINT_LIMIT));
         *remaining_minting_amount = *remaining_minting_amount - user_minting_amount;
     }
@@ -135,7 +135,7 @@ module post_mint_reveal_nft::whitelist {
         assert!(now < whitelist_stage.whitelist_minting_end_time, error::invalid_argument(EINVALID_UPDATE_AFTER_MINTING));
 
         vector::for_each_ref(&wl_addresses, |wl_address| {
-            bucket_table::add(&mut whitelist_stage.whitelisted_address, *wl_address, mint_limit);
+            whitelist_stage.whitelisted_address.add(*wl_address, mint_limit);
         });
     }
 }

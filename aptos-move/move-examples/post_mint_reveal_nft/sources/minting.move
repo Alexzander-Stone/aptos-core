@@ -414,24 +414,24 @@ module post_mint_reveal_nft::minting {
         let collection_config = borrow_global_mut<CollectionConfig>(@post_mint_reveal_nft);
 
         assert!(
-            vector::length(&token_uris) + big_vector::length(
-                &collection_config.tokens
-            ) <= collection_config.destination_collection_maximum || collection_config.destination_collection_maximum == 0,
+            vector::length(&token_uris) + collection_config.tokens.length()
+            <=
+            collection_config.destination_collection_maximum || collection_config.destination_collection_maximum == 0,
             error::invalid_argument(EEXCEEDS_COLLECTION_MAXIMUM)
         );
 
         vector::enumerate_ref(&token_uris, |i, token_uri| {
             assert!(
-                !bucket_table::contains(&collection_config.deduped_tokens, token_uri),
+                !collection_config.deduped_tokens.contains(token_uri),
                 error::invalid_argument(EDUPLICATE_TOKEN_URI)
             );
-            big_vector::push_back(&mut collection_config.tokens, TokenAsset {
+            collection_config.tokens.push_back(TokenAsset {
                 token_uri: *token_uri,
                 property_keys: *vector::borrow(&property_keys, i),
                 property_values: *vector::borrow(&property_values, i),
                 property_types: *vector::borrow(&property_types, i),
             });
-            bucket_table::add(&mut collection_config.deduped_tokens, *token_uri, true);
+            collection_config.deduped_tokens.add(*token_uri, true);
         });
     }
 
@@ -471,14 +471,13 @@ module post_mint_reveal_nft::minting {
                 // If the claimer's address is not on the public_minting_addresses table yet, it means this is the
                 // first time that this claimer mints. We will add the claimer's address and remaining amount of mints
                 // to the public_minting_addresses table.
-                if (!bucket_table::contains(&public_mint_config.public_minting_addresses, &claimer_addr)) {
-                    bucket_table::add(
-                        &mut public_mint_config.public_minting_addresses,
+                if (!public_mint_config.public_minting_addresses.contains(&claimer_addr)) {
+                    public_mint_config.public_minting_addresses.add(
                         claimer_addr,
                         collection_config.public_mint_limit
                     );
                 };
-                let limit = bucket_table::borrow_mut(&mut public_mint_config.public_minting_addresses, claimer_addr);
+                let limit = public_mint_config.public_minting_addresses.borrow_mut(claimer_addr);
                 assert!(amount <= *limit, error::invalid_argument(EAMOUNT_EXCEEDS_MINTS_ALLOWED));
                 *limit = *limit - amount;
             };
@@ -517,12 +516,12 @@ module post_mint_reveal_nft::minting {
         );
 
         // Assert there's still some token uris in the vector.
-        assert!(big_vector::length(&collection_config.tokens) > 0, error::permission_denied(ENO_ENOUGH_TOKENS_LEFT));
+        assert!(collection_config.tokens.length() > 0, error::permission_denied(ENO_ENOUGH_TOKENS_LEFT));
 
         // Randomize which token we're assigning to the user.
-        let index = now % big_vector::length(&collection_config.tokens);
-        let token = big_vector::swap_remove(&mut collection_config.tokens, index);
-        bucket_table::remove(&mut collection_config.deduped_tokens, &token.token_uri);
+        let index = now % collection_config.tokens.length();
+        let token = collection_config.tokens.swap_remove(index);
+        collection_config.deduped_tokens.remove(&token.token_uri);
 
         // The name of the destination token will be based on the property version of the source certificate token.
         let token_name = collection_config.destination_token_name_base;
@@ -581,7 +580,7 @@ module post_mint_reveal_nft::minting {
         let nft_mint_config = borrow_global_mut<NFTMintConfig>(@post_mint_reveal_nft);
         let source_token = borrow_global_mut<SourceToken>(@post_mint_reveal_nft);
         let collection_config = borrow_global_mut<CollectionConfig>(@post_mint_reveal_nft);
-        assert!(source_token.source_token_counter + amount <= big_vector::length(&collection_config.tokens) + 1,
+        assert!(source_token.source_token_counter + amount <= collection_config.tokens.length() + 1,
             error::permission_denied(ENO_ENOUGH_TOKENS_LEFT));
 
         // pay for the source NFT
@@ -746,8 +745,7 @@ module post_mint_reveal_nft::minting {
         mint_source_certificate(&public_nft_claimer, 1);
         let public_mint_config = borrow_global_mut<PublicMintConfig>(@post_mint_reveal_nft);
         assert!(
-            *bucket_table::borrow(
-                &mut public_mint_config.public_minting_addresses,
+            *public_mint_config.public_minting_addresses.borrow(
                 signer::address_of(&public_nft_claimer)
             ) == 1,
             1
@@ -810,8 +808,8 @@ module post_mint_reveal_nft::minting {
         assert!(token::balance_of(signer::address_of(&wl_nft_claimer), exchanged_token_id1) == 1, 3);
         assert!(token::balance_of(signer::address_of(&wl_nft_claimer), exchanged_token_id2) == 1, 4);
         assert!(token::balance_of(signer::address_of(&public_nft_claimer), exchanged_token_id3) == 1, 5);
-        assert!(big_vector::length(&collection_config.tokens) == 0, 6);
-        assert!(bucket_table::length(&collection_config.deduped_tokens) == 0, 7);
+        assert!(collection_config.tokens.length() == 0, 6);
+        assert!(collection_config.deduped_tokens.length() == 0, 7);
 
         // Assert that we burned the source certificate.
         assert!(token::balance_of(signer::address_of(&wl_nft_claimer), token_id1) == 0, 8);

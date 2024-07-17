@@ -47,39 +47,39 @@ module post_mint_reveal_nft::bucket_table {
             level: 0,
             len: 0,
         };
-        split(&mut map, initial_buckets - 1);
+        map.split(initial_buckets - 1);
         map
     }
 
     /// Destroy empty map.
     /// Aborts if it's not empty.
-    public fun destroy_empty<K, V>(map: BucketTable<K, V>) {
-        assert!(map.len == 0, error::invalid_argument(ENOT_EMPTY));
+    public fun destroy_empty<K, V>(self: BucketTable<K, V>) {
+        assert!(self.len == 0, error::invalid_argument(ENOT_EMPTY));
         let i = 0;
-        while (i < map.num_buckets) {
-            vector::destroy_empty(table_with_length::remove(&mut map.buckets, i));
+        while (i < self.num_buckets) {
+            vector::destroy_empty(table_with_length::remove(&mut self.buckets, i));
             i = i + 1;
         };
-        let BucketTable {buckets, num_buckets: _, level: _, len: _} = map;
+        let BucketTable {buckets, num_buckets: _, level: _, len: _} = self;
         table_with_length::destroy_empty(buckets);
     }
 
     /// Add (key, value) pair in the hash map, it may grow one bucket if current load factor exceeds the threshold.
     /// Note it may not split the actual overflowed bucket.
     /// Abort if `key` already exists.
-    public fun add<K, V>(map: &mut BucketTable<K, V>, key: K, value: V) {
+    public fun add<K, V>(self: &mut BucketTable<K, V>, key: K, value: V) {
         let hash = sip_hash_from_value(&key);
-        let index = bucket_index(map.level, map.num_buckets, hash);
-        let bucket = table_with_length::borrow_mut(&mut map.buckets, index);
+        let index = bucket_index(self.level, self.num_buckets, hash);
+        let bucket = table_with_length::borrow_mut(&mut self.buckets, index);
         vector::for_each_ref(bucket, |entry|{
             let entry: &Entry<K, V> = entry;
             assert!(&entry.key != &key, error::invalid_argument(EALREADY_EXIST));
         });
         vector::push_back(bucket, Entry {hash, key, value});
-        map.len = map.len + 1;
+        self.len = self.len + 1;
 
-        if (load_factor(map) > SPLIT_THRESHOLD) {
-            split_one_bucket(map);
+        if (self.load_factor() > SPLIT_THRESHOLD) {
+            self.split_one_bucket();
         }
     }
 
@@ -92,24 +92,24 @@ module post_mint_reveal_nft::bucket_table {
     }
 
     /// Split the next bucket into two and re-insert existing items.
-    fun split_one_bucket<K, V>(map: &mut BucketTable<K, V>) {
-        let new_bucket_index = map.num_buckets;
+    fun split_one_bucket<K, V>(self: &mut BucketTable<K, V>) {
+        let new_bucket_index = self.num_buckets;
         // the next bucket to split is num_bucket without the most significant bit.
-        let to_split = xor(new_bucket_index, (1 << map.level));
+        let to_split = xor(new_bucket_index, (1 << self.level));
         let new_bucket = vector::empty();
-        map.num_buckets = new_bucket_index + 1;
+        self.num_buckets = new_bucket_index + 1;
         // if the whole level is splitted once, bump the level.
-        if (to_split + 1 == 1 << map.level) {
-            map.level = map.level + 1;
+        if (to_split + 1 == 1 << self.level) {
+            self.level = self.level + 1;
         };
-        let old_bucket = table_with_length::borrow_mut(&mut map.buckets, to_split);
+        let old_bucket = table_with_length::borrow_mut(&mut self.buckets, to_split);
         // partition the bucket. after the loop, i == j and [0..i) stays in old bucket, [j..len) goes to new bucket
         let i = 0;
         let j = vector::length(old_bucket);
         let len = j;
         while (i < j) {
             let entry = vector::borrow(old_bucket, i);
-            let index = bucket_index(map.level, map.num_buckets, entry.hash);
+            let index = bucket_index(self.level, self.num_buckets, entry.hash);
             if (index == new_bucket_index) {
                 j = j - 1;
                 vector::swap(old_bucket, i, j);
@@ -122,7 +122,7 @@ module post_mint_reveal_nft::bucket_table {
             vector::push_back(&mut new_bucket, entry);
             len = len - 1;
         };
-        table_with_length::add(&mut map.buckets, new_bucket_index, new_bucket);
+        table_with_length::add(&mut self.buckets, new_bucket_index, new_bucket);
     }
 
     /// Return the expected bucket index to find the hash.
@@ -141,9 +141,9 @@ module post_mint_reveal_nft::bucket_table {
     /// Aborts if there is no entry for `key`.
     /// The requirement of &mut BucketTable is to bypass the borrow checker issue described in https://github.com/move-language/move/issues/95
     /// Once Table supports borrow by K, we can remove the &mut
-    public fun borrow<K: copy + drop, V>(map: &mut BucketTable<K, V>, key: K): &V {
-        let index = bucket_index(map.level, map.num_buckets, sip_hash_from_value(&key));
-        let bucket = table_with_length::borrow_mut(&mut map.buckets, index);
+    public fun borrow<K: copy + drop, V>(self: &mut BucketTable<K, V>, key: K): &V {
+        let index = bucket_index(self.level, self.num_buckets, sip_hash_from_value(&key));
+        let bucket = table_with_length::borrow_mut(&mut self.buckets, index);
         let i = 0;
         let len = vector::length(bucket);
         while (i < len) {
@@ -158,9 +158,9 @@ module post_mint_reveal_nft::bucket_table {
 
     /// Acquire a mutable reference to the value which `key` maps to.
     /// Aborts if there is no entry for `key`.
-    public fun borrow_mut<K: copy + drop, V>(map: &mut BucketTable<K, V>, key: K): &mut V {
-        let index = bucket_index(map.level, map.num_buckets, sip_hash_from_value(&key));
-        let bucket = table_with_length::borrow_mut(&mut map.buckets, index);
+    public fun borrow_mut<K: copy + drop, V>(self: &mut BucketTable<K, V>, key: K): &mut V {
+        let index = bucket_index(self.level, self.num_buckets, sip_hash_from_value(&key));
+        let bucket = table_with_length::borrow_mut(&mut self.buckets, index);
         let i = 0;
         let len = vector::length(bucket);
         while (i < len) {
@@ -174,9 +174,9 @@ module post_mint_reveal_nft::bucket_table {
     }
 
     /// Returns true iff `table` contains an entry for `key`.
-    public fun contains<K, V>(map: &BucketTable<K, V>, key: &K): bool {
-        let index = bucket_index(map.level, map.num_buckets, sip_hash_from_value(key));
-        let bucket = table_with_length::borrow(&map.buckets, index);
+    public fun contains<K, V>(self: &BucketTable<K, V>, key: &K): bool {
+        let index = bucket_index(self.level, self.num_buckets, sip_hash_from_value(key));
+        let bucket = table_with_length::borrow(&self.buckets, index);
         vector::any(bucket, |entry| {
             let entry: &Entry<K, V> = entry;
             &entry.key == key
@@ -185,16 +185,16 @@ module post_mint_reveal_nft::bucket_table {
 
     /// Remove from `table` and return the value which `key` maps to.
     /// Aborts if there is no entry for `key`.
-    public fun remove<K: drop, V>(map: &mut BucketTable<K,V>, key: &K): V {
-        let index = bucket_index(map.level, map.num_buckets, sip_hash_from_value(key));
-        let bucket = table_with_length::borrow_mut(&mut map.buckets, index);
+    public fun remove<K: drop, V>(self: &mut BucketTable<K,V>, key: &K): V {
+        let index = bucket_index(self.level, self.num_buckets, sip_hash_from_value(key));
+        let bucket = table_with_length::borrow_mut(&mut self.buckets, index);
         let i = 0;
         let len = vector::length(bucket);
         while (i < len) {
             let entry = vector::borrow(bucket, i);
             if (&entry.key == key) {
                 let Entry {hash:_, key:_, value} = vector::swap_remove(bucket, i);
-                map.len = map.len - 1;
+                self.len = self.len - 1;
                 return value
             };
             i = i + 1;
@@ -203,20 +203,20 @@ module post_mint_reveal_nft::bucket_table {
     }
 
     /// Returns the length of the table, i.e. the number of entries.
-    public fun length<K, V>(map: &BucketTable<K, V>): u64 {
-        map.len
+    public fun length<K, V>(self: &BucketTable<K, V>): u64 {
+        self.len
     }
 
     /// Return the load factor of the hashmap.
-    public fun load_factor<K, V>(map: &BucketTable<K, V>): u64 {
-        map.len * 100 / (map.num_buckets * TARGET_LOAD_PER_BUCKET)
+    public fun load_factor<K, V>(self: &BucketTable<K, V>): u64 {
+        self.len * 100 / (self.num_buckets * TARGET_LOAD_PER_BUCKET)
     }
 
     /// Reserve `additional_buckets` more buckets.
-    public fun split<K, V>(map: &mut BucketTable<K, V>, additional_buckets: u64) {
+    public fun split<K, V>(self: &mut BucketTable<K, V>, additional_buckets: u64) {
         while (additional_buckets > 0) {
             additional_buckets = additional_buckets - 1;
-            split_one_bucket(map);
+            self.split_one_bucket();
         }
     }
 
@@ -225,24 +225,24 @@ module post_mint_reveal_nft::bucket_table {
         let map = new(1);
         let i = 0;
         while (i < 200) {
-            add(&mut map, i, i);
+            map.add(i, i);
             i = i + 1;
         };
-        assert!(length(&map) == 200, 0);
+        assert!(map.length() == 200, 0);
         i = 0;
         while (i < 200) {
-            *borrow_mut(&mut map, i) = i * 2;
-            assert!(*borrow(&mut map, i) == i * 2, 0);
+            *map.borrow_mut(i) = i * 2;
+            assert!(*map.borrow(i) == i * 2, 0);
             i = i + 1;
         };
         i = 0;
         assert!(map.num_buckets > 20, map.num_buckets);
         while (i < 200) {
-            assert!(contains(&map, &i), 0);
-            assert!(remove(&mut map, &i) == i * 2, 0);
+            assert!(map.contains(&i), 0);
+            assert!(map.remove(&i) == i * 2, 0);
             i = i + 1;
         };
-        destroy_empty(map);
+        map.destroy_empty();
     }
 
     #[test]
@@ -253,13 +253,13 @@ module post_mint_reveal_nft::bucket_table {
         while (i <= 256) {
             assert!(map.num_buckets == i, 0);
             assert!(map.level == level, i);
-            split_one_bucket(&mut map);
+            map.split_one_bucket();
             i = i + 1;
             if (i == 1 << (level + 1)) {
                 level = level + 1;
             };
         };
-        destroy_empty(map);
+        map.destroy_empty();
     }
 
     #[test]
@@ -268,7 +268,7 @@ module post_mint_reveal_nft::bucket_table {
         assert!(map.level == 3, 0);
         let i = 0;
         while (i < 4) {
-            split_one_bucket(&mut map);
+            map.split_one_bucket();
             i = i + 1;
         };
         assert!(map.level == 3, 0);
@@ -283,6 +283,6 @@ module post_mint_reveal_nft::bucket_table {
             assert!(index == j, 0);
             i = i + 1;
         };
-        destroy_empty(map);
+        map.destroy_empty();
     }
 }
